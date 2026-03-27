@@ -1,103 +1,221 @@
 import streamlit as st
+import pandas as pd
 import random
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
 
-st.set_page_config(page_title="轻松一天生成器（上海版）", page_icon="🌿")
+st.set_page_config(page_title="轻松一天生成器", page_icon="🌿", layout="centered")
 
-st.title("🌿 轻松一天生成器（上海版）")
-st.write("不用想太多，帮你随便过一天～")
+# ===== UI样式 =====
+st.markdown("""
+    <style>
+    .card {
+        padding: 18px;
+        border-radius: 15px;
+        background-color: #f7f7f7;
+        margin-bottom: 12px;
+    }
+    .title {
+        font-size: 17px;
+        font-weight: bold;
+    }
+    .meta {
+        color: gray;
+        font-size: 14px;
+        margin-top: 6px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 用户选择
-mood = st.selectbox(
-    "你现在的状态是：",
-    ["一个人", "想放松", "不想花钱", "随便逛逛"]
-)
+# ===== 标题 =====
+st.title("🌿 轻松一天生成器")
+st.caption("不想计划的时候，就随便过一天")
 
-# 方案库（文案升级版）
-plans = {
-    "一个人": [
-        ["找个公园随便走走", "找家安静咖啡店坐一会", "吃点简单的晚餐"],
-        ["去书店逛逛", "找个角落发发呆", "回家随便看看视频"],
-        ["在街上随便走走", "买杯饮料坐着", "早点回去休息"],
-        ["找个商场慢慢逛", "看看没见过的小店", "随便吃点东西"],
-        ["去一个不常去的地方走走", "找地方坐一会", "慢慢回家"]
-    ],
-    "想放松": [
-        ["找个绿地晒晒太阳", "喝杯咖啡放空", "慢慢吃顿饭"],
-        ["去安静商场逛逛", "随便看看店", "吃点甜的"],
-        ["城市walk随便走", "看到哪就停一下", "回家休息"],
-        ["找个舒服的地方坐着", "刷会手机", "简单吃点"],
-        ["下午随便晃一圈", "找地方歇会", "晚上早点回去"]
-    ],
-    "不想花钱": [
-        ["去公园走走", "找个地方坐着", "回家"],
-        ["随便在街上晃", "看看人来人往", "早点休息"],
-        ["去图书馆待一会", "散步", "回家"],
-        ["沿着一条路一直走", "找地方坐会", "结束一天"],
-        ["随便换个区逛逛", "走累了就休息", "回家"]
-    ],
-    "随便逛逛": [
-        ["随机坐一站地铁下车", "附近逛逛", "找点吃的"],
-        ["去没去过的街区", "随便走走", "喝点东西"],
-        ["打开地图随便选点", "走过去看看", "路上随便停"],
-        ["选一个方向一直走", "看到有意思的就停", "慢慢结束"],
-        ["找条没走过的路", "随便看看周围", "吃点东西"]
-    ]
-}
+# ===== 数据 =====
+df = pd.read_csv("places.csv")
 
-# 花费范围
-cost_range = {
-    "一个人": "约50-100元",
-    "想放松": "约80-150元",
-    "不想花钱": "0-30元",
-    "随便逛逛": "约30-80元"
-}
-
-# 氛围文案
-vibes = [
-    "今天适合慢一点，不用着急。",
-    "就这样随便走走，也挺好的。",
-    "不用特别安排，轻松一点就好。",
-    "给自己一点不被打扰的时间。",
-    "今天不需要效率，只需要舒服。"
-]
-
-# 初始化 session（让按钮更丝滑）
-if "results" not in st.session_state:
-    st.session_state.results = []
-
-# 生成函数
-def generate_plan():
-    results = []
-    for _ in range(3):
-        plan = random.choice(plans[mood])
-        vibe = random.choice(vibes)
-        results.append((plan, vibe))
-    st.session_state.results = results
-
-# 按钮区
+# ===== 输入区 =====
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("✨ 生成今天安排"):
-        generate_plan()
+    people = st.selectbox("👥 和谁", ["一个人", "情侣", "闺蜜", "朋友", "家人"])
 
 with col2:
-    if st.button("🔄 再来一批"):
-        generate_plan()
+    weather = st.selectbox("🌦 天气", ["晴天", "雨天"])
 
-# 展示结果
-if st.session_state.results:
-    st.markdown("---")
-    st.subheader("🌈 给你3种过法：")
+vibe = st.selectbox(
+    "🌿 想要什么感觉",
+    ["随意", "放松", "热闹", "文艺"]
+)
 
-    for i, (plan, vibe) in enumerate(st.session_state.results):
-        st.markdown(f"### 方案 {i+1}")
+# ===== 匹配函数 =====
+def match(value, target):
+    return target in str(value) or "不限" in str(value) or "所有人" in str(value)
 
-        st.write(f"- 下午：{plan[0]}")
-        st.write(f"- 傍晚：{plan[1]}")
-        st.write(f"- 晚上：{plan[2]}")
+# ===== 生成逻辑 =====
+def generate_plan():
+    filtered = df[
+        df["people"].apply(lambda x: match(x, people)) &
+        df["weather"].apply(lambda x: match(x, weather))
+    ]
 
-        st.write(f"💰 预计花费：{cost_range[mood]}")
-        st.write(f"🌿 感觉：{vibe}")
+    if vibe != "随意":
+        filtered = filtered[filtered["vibe"] == vibe]
 
-        st.markdown("---")
+    if len(filtered) < 3:
+        filtered = df
+
+    # ===== 区域统一 =====
+    area = random.choice(filtered["area"].unique())
+    filtered = filtered[filtered["area"] == area]
+
+    if len(filtered) < 3:
+        filtered = df
+
+    # ===== 去重控制 =====
+    used_names = set()
+    used_types = set()
+
+    def pick_by_type(preferred_types):
+        # 优先选指定类型
+        candidates = filtered[filtered["type"].isin(preferred_types)]
+
+        # 去掉已选地点 & 类型
+        candidates = candidates[
+            ~candidates["name"].isin(used_names) &
+            ~candidates["type"].isin(used_types)
+        ]
+
+        # 如果没有 → 放宽“类型限制”（但不重复地点）
+        if len(candidates) == 0:
+            candidates = filtered[
+                ~filtered["name"].isin(used_names)
+            ]
+
+        # 如果还是没有（极端情况）
+        if len(candidates) == 0:
+            candidates = filtered
+
+        choice = candidates.sample(1).iloc[0]
+
+        used_names.add(choice["name"])
+        used_types.add(choice["type"])
+
+        return choice
+
+    # ===== 时间段选择 =====
+    afternoon = pick_by_type(["coffee", "walk"])
+    evening = pick_by_type(["walk"])
+    night = pick_by_type(["food", "night"])
+
+    plan = [
+        (afternoon["name"], afternoon["desc"]),
+        (evening["name"], evening["desc"]),
+        (night["name"], night["desc"]),
+    ]
+
+    return plan, area
+
+def generate_image(plan, area):
+    from PIL import Image, ImageDraw, ImageFont
+    from io import BytesIO
+
+    # ===== 画布（更像小红书比例）=====
+    img = Image.new('RGB', (700, 1000), color=(245, 245, 245))
+    draw = ImageDraw.Draw(img)
+
+    # ===== 字体 =====
+    try:
+        font_title = ImageFont.truetype("NotoSansSC-Regular.ttf", 48)
+        font_sub = ImageFont.truetype("NotoSansSC-Regular.ttf", 26)
+        font_text = ImageFont.truetype("NotoSansSC-Regular.ttf", 30)
+    except:
+        font_title = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
+        font_text = ImageFont.load_default()
+
+    # ===== 标题 =====
+    draw.text((50, 60), "今日份随便过一天", fill=(0, 0, 0), font=font_title)
+
+    # ===== 副信息 =====
+    draw.text((50, 130), f"{area} ｜ 不想计划也没关系", fill=(120, 120, 120), font=font_sub)
+
+    # ===== 卡片背景 =====
+    card_x1, card_y1 = 40, 180
+    card_x2, card_y2 = 660, 780
+    draw.rounded_rectangle(
+        (card_x1, card_y1, card_x2, card_y2),
+        radius=25,
+        fill=(255, 255, 255)
+    )
+
+    # ===== 行程内容 =====
+    y = 220
+    time_labels = ["下午", "傍晚", "晚上"]
+
+    for i in range(3):
+        name, desc = plan[i]
+
+        # 时间
+        draw.text((70, y), time_labels[i], fill=(100, 100, 100), font=font_sub)
+
+        # 地点
+        draw.text((70, y + 40), name, fill=(0, 0, 0), font=font_text)
+
+        # 描述
+        draw.text((70, y + 80), desc, fill=(120, 120, 120), font=font_sub)
+
+        y += 170
+
+    # ===== 底部文案 =====
+    draw.text(
+        (50, 820),
+        "不想计划的时候，就随便过一天\n反而更轻松一点",
+        fill=(150, 150, 150),
+        font=font_sub
+    )
+
+    # ===== 输出 =====
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return buffer
+
+# ===== 按钮 =====
+if st.button("✨ 随便安排一下", use_container_width=True):
+    plan, area = generate_plan()
+    st.session_state.plan = plan
+    st.session_state.area = area
+
+# ===== 展示结果 =====
+if "plan" in st.session_state:
+
+    st.markdown("## 🌈 今天可以这样过")
+
+    st.markdown(f"""
+    <div class="meta">📍 {st.session_state.area}</div>
+    """, unsafe_allow_html=True)
+
+    time_labels = ["🌤 下午", "🌆 傍晚", "🌙 晚上"]
+
+    for i in range(3):
+        name, desc = st.session_state.plan[i]
+
+        st.markdown(f"""
+        <div class="card">
+            <div class="title">{time_labels[i]} · {name}</div>
+            <div class="meta">{desc}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+if "plan" in st.session_state:
+    # 生成图片
+    img_buffer = generate_image(st.session_state.plan, st.session_state.area)
+
+    st.download_button(
+        label="📸 下载分享图片",
+        data=img_buffer,
+        file_name="today_plan.png",
+        mime="image/png"
+    )
