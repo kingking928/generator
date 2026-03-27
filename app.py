@@ -46,7 +46,7 @@ with col2:
 
 vibe = st.selectbox(
     "🌿 想要什么感觉",
-    ["随意", "放松", "热闹", "文艺"]
+    ["都可以", "安静", "热闹", "放空", "出片"]
 )
 area_choice = st.selectbox("📍 想在哪个区", areas)
 
@@ -64,7 +64,7 @@ def generate_plan():
     if area_choice != "不限":
         filtered = filtered[df["area"] == area_choice]
 
-    if vibe != "随意":
+    if vibe != "都可以":
         filtered = filtered[filtered["vibe"] == vibe]
 
     if len(filtered) < 3:
@@ -113,8 +113,8 @@ def generate_plan():
 
     # ===== 时间段选择 =====
     afternoon = pick_by_type(["coffee", "walk"])
-    evening = pick_by_type(["walk"])
-    night = pick_by_type(["food", "night"])
+    evening = pick_by_type(["walk", "food"])
+    night = pick_by_type(["night"])
 
     plan = [
         (afternoon["name"], afternoon["desc"]),
