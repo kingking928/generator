@@ -34,6 +34,7 @@ st.caption("不想计划的时候，就随便过一天")
 # ===== 数据 =====
 df = pd.read_csv("places.csv")
 
+areas = ["不限"] + sorted(df["area"].dropna().unique().tolist())
 # ===== 输入区 =====
 col1, col2 = st.columns(2)
 
@@ -47,6 +48,7 @@ vibe = st.selectbox(
     "🌿 想要什么感觉",
     ["随意", "放松", "热闹", "文艺"]
 )
+area_choice = st.selectbox("📍 想在哪个区", areas)
 
 # ===== 匹配函数 =====
 def match(value, target):
@@ -59,6 +61,9 @@ def generate_plan():
         df["weather"].apply(lambda x: match(x, weather))
     ]
 
+    if area_choice != "不限":
+        filtered = filtered[df["area"] == area_choice]
+
     if vibe != "随意":
         filtered = filtered[filtered["vibe"] == vibe]
 
@@ -66,7 +71,10 @@ def generate_plan():
         filtered = df
 
     # ===== 区域统一 =====
-    area = random.choice(filtered["area"].unique())
+    if area_choice != "不限":
+        area = area_choice
+    else:
+        area = random.choice(filtered["area"].unique())
     filtered = filtered[filtered["area"] == area]
 
     if len(filtered) < 3:
